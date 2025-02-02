@@ -7,6 +7,7 @@
 
 import streamlit as st
 import fastlite
+from google.genai.errors import ClientError
 from pydantic import RootModel
 # from pydantic.dataclasses import dataclass as pydantic_dataclass
 # from datetime import datetime
@@ -26,7 +27,8 @@ from sklearn.neighbors import NearestNeighbors
 
 # Get our api key
 # Set up gemini client
-client = genai.Client(api_key=st.secrets['GOOGLE_API_KEY'])
+if 'client' not in st.session_state:
+    st.session_state['client'] = genai.Client(api_key=st.secrets['GOOGLE_API_KEY'])
 
 # =========================
 # ===== Gemini Config =====
@@ -71,14 +73,14 @@ GEMINI_DESCRIPTION_CONFIG = types.GenerateContentConfig(safety_settings=None,
 class GeminiDescription:
     def __init__(self, _image: Image.Image, _image_metadata: AssetMetadata, _record: Assets):
         self.image = _image
-        self.image_metadata = _image_metadata
+        self.image_metadata = RootModel[AssetMetadata](_image_metadata).model_dump_json(exclude_none=True)
         self.record = _record
         self.description = self.generate_description()
 
     def generate_description(self) -> GenerativeMetadata:
-        _result = client.models.generate_content(model='gemini-2.0-flash-exp',
-                                                 config=GEMINI_DESCRIPTION_CONFIG,
-                                                 contents=[self.image_metadata, self.image])
+        _result = st.session_state['client'].models.generate_content(model='gemini-2.0-flash-exp',
+                                                                     config=GEMINI_DESCRIPTION_CONFIG,
+                                                                     contents=[self.image_metadata, self.image])
         _result_dict = json.loads(_result.text)
 
         return GenerativeMetadata(id=self.record.id,
@@ -96,8 +98,8 @@ class GeminiEmbedding:
         self.embedding = self.generate_embedding()
 
     def generate_embedding(self) -> Embeddings:
-        result = client.models.embed_content(model="models/text-embedding-004",
-                                             contents=self.description)
+        result = st.session_state['client'].models.embed_content(model="models/text-embedding-004",
+                                                                 contents=self.description)
         _embedding = np.array(result.embeddings[0].values).astype(np.float32).tobytes()
 
         return Embeddings(id=self.record.id,
@@ -160,7 +162,8 @@ class Neighbors:
         return search_result
 
 
-neighbors = Neighbors()
+if 'neighbors' not in st.session_state:
+    st.session_state['neighbors'] = Neighbors()
 
 
 # =========================
@@ -255,7 +258,8 @@ def import_image(_image_path: str, _update=False):
         # generate image descriptions
         time.sleep(1)
         _genai_desc = GeminiDescription(_image,
-                                        RootModel[AssetMetadata](_meta_record).model_dump_json(exclude_none=True),
+                                        # RootModel[AssetMetadata](_meta_record).model_dump_json(exclude_none=True),
+                                        _meta_record,
                                         _record
                                         ).description
         # insert the generated image descriptions into the database
@@ -274,7 +278,7 @@ def import_image(_image_path: str, _update=False):
 
 
 # Sql search
-def search_image_library_sql(_sql_query: str) -> str:
+def search_image_library_sql(_sql_query: str) -> dict:
     """
     Search the image library database using sql queries.
 
@@ -305,15 +309,17 @@ def search_image_library_semantic(_query_text: str) -> list[Assets]:
     print(f"semantic query: {_query_text}")
 
     # Generate an embedding of our query text
-    _response = client.models.embed_content(model="models/text-embedding-004",
-                                            contents=_query_text)
+    _response = st.session_state['client'].models.embed_content(model="models/text-embedding-004",
+                                                                contents=_query_text)
     # Format our embedding as a numpy array
     _embedding = np.array(_response.embeddings[0].values).astype(np.float32)
     # Query our nearest neighbors model
-    _results = neighbors.search(search_vector=_embedding)[1].tolist()[0]
+    _results = st.session_state['neighbors'].search(search_vector=_embedding)[1].tolist()[0]
 
-    return [Assets(**search_image_library_sql(f"SELECT * FROM assets WHERE id == {neighbors.index_map[_res]}")[0]) for
-            _res in _results]
+    _idx = [st.session_state['neighbors'].index_map[_res] for _res in _results]
+
+    return [Assets(**search_image_library_sql(f"SELECT * FROM assets WHERE id == {_id}")[0]) for
+            _id in _idx]
 
 
 # =========================
@@ -363,7 +369,6 @@ tools = types.Tool(function_declarations=[import_image_func,
                                           ]
                    )
 
-
 # =========================
 # ====== Config Chat ======
 # =========================
@@ -384,9 +389,8 @@ CHAT_MODEL_CONFIG = types.GenerateContentConfig(safety_settings=None,
                                                 automatic_function_calling=types.AutomaticFunctionCallingConfig(
                                                     disable=True,
                                                     maximum_remote_calls=None
-                                                    )
                                                 )
-
+                                                )
 
 # ==========================
 # ===== Streamlit Begin ====
@@ -400,8 +404,8 @@ st.header('Gemini Image Library Agent')
 
 if "chat" not in st.session_state:
     # # Start a new chat
-    st.session_state.chat = client.chats.create(model='gemini-2.0-flash-exp',
-                                                config=CHAT_MODEL_CONFIG)
+    st.session_state.chat = st.session_state['client'].chats.create(model='gemini-2.0-flash-exp',
+                                                                    config=CHAT_MODEL_CONFIG)
 
 
 def process_response(_response):
@@ -410,7 +414,8 @@ def process_response(_response):
         content = ""
         for call in function_calls:
             if call.name == 'import_image':
-                content = import_image(_image_path=call.args['_image_path'], _update=call.args['_update'])
+                content = import_image(**call.args)
+                # content = import_image(_image_path=call.args['_image_path'], _update=call.args['_update'])
             elif call.name == 'search_image_library_sql':
                 content = search_image_library_sql(_sql_query=call.args['_sql_query'])
             elif call.name == 'search_image_library_semantic':
@@ -443,8 +448,8 @@ if prompt := st.chat_input():
 
     try:
         msg = process_response(response)
-    except Exception as ext:
-        msg = "Meow! What?"
+    except ClientError as ce:
+        msg = ce
 
     st.session_state.messages.append({"role": "assistant", "content": msg})
     st.chat_message("assistant").write(msg)
