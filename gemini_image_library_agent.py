@@ -392,7 +392,7 @@ CHAT_MODEL_CONFIG = types.GenerateContentConfig(safety_settings=None,
 # ===== Streamlit Begin ====
 # ==========================
 
-st.header('Gemini Powered Image Library')
+st.header('Gemini Image Library Agent')
 
 # ==================
 # === BEGIN CHAT ===
