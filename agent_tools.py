@@ -2,7 +2,7 @@
 #
 # Author: Peter Jakubowski
 # Date: 2/1/2025
-# Description:
+# Description: Functions, classes, tools, and configurations
 #
 
 # =========================
@@ -306,7 +306,7 @@ class GeminiDescription:
         self.description = self.generate_description()
 
     def generate_description(self) -> GenerativeMetadata:
-        _result = client.models.generate_content(model='gemini-2.0-flash-exp',
+        _result = client.models.generate_content(model='gemini-2.0-flash-001',
                                                  config=GEMINI_DESCRIPTION_CONFIG,
                                                  contents=[self.image_metadata, self.image])
         _result_dict = json.loads(_result.text)
@@ -336,7 +336,7 @@ class GeminiEmbedding:
 
 class GeminiChat:
     def __init__(self):
-        self.chat = client.chats.create(model='gemini-2.0-flash-exp',
+        self.chat = client.chats.create(model='gemini-2.0-flash-001',
                                         config=CHAT_MODEL_CONFIG)
 
 
@@ -385,9 +385,9 @@ def process_response(_response, _chat):
                 elif call.name == 'search_image_library_semantic':
                     content = search_image_library_semantic(_query_text=call.args['_query_text'])
             except Exception as ext:
-                st.warning(ext.__cause__)
+                st.warning(ext.__str__())
                 return process_response(_chat.send_message(types.Part.from_function_response(name=call.name,
-                                                                                             response={'content': ext.__cause__})
+                                                                                             response={'content': ext.__str__()})
                                                            ),
                                         _chat=_chat
                                         )
