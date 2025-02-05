@@ -377,20 +377,27 @@ def process_response(_response, _chat):
         results = []
         content = ""
         for call in function_calls:
-            if call.name == 'import_image':
-                content = import_image(**call.args)
-            elif call.name == 'search_image_library_sql':
-                content = search_image_library_sql(**call.args)
-            elif call.name == 'search_image_library_semantic':
-                content = search_image_library_semantic(_query_text=call.args['_query_text'])
-
-            results.append(
-                types.Part.from_function_response(
-                    name=call.name,
-                    response={'content': content}
+            try:
+                if call.name == 'import_image':
+                    content = import_image(**call.args)
+                elif call.name == 'search_image_library_sql':
+                    content = search_image_library_sql(**call.args)
+                elif call.name == 'search_image_library_semantic':
+                    content = search_image_library_semantic(_query_text=call.args['_query_text'])
+            except Exception as ext:
+                st.warning(ext.__cause__)
+                return process_response(_chat.send_message(types.Part.from_function_response(name=call.name,
+                                                                                             response={'content': ext.__cause__})
+                                                           ),
+                                        _chat=_chat
+                                        )
+            else:
+                results.append(
+                    types.Part.from_function_response(
+                        name=call.name,
+                        response={'content': content}
+                    )
                 )
-            )
-
         time.sleep(1)
         return process_response(_chat.send_message(results), _chat=_chat)
 
