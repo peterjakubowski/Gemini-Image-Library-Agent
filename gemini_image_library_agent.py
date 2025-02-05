@@ -2,7 +2,7 @@
 #
 # Author: Peter Jakubowski
 # Date: 2/1/2025
-# Description:
+# Description: Streamlit chat app using the Google Gemini API
 #
 
 import streamlit as st
