@@ -2,7 +2,7 @@
 #
 # Author: Peter Jakubowski
 # Date: 2/1/2025
-# Description:
+# Description: Database schema
 #
 
 from pydantic.dataclasses import dataclass as pydantic_dataclass
