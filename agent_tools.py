@@ -16,6 +16,7 @@ from sklearn.neighbors import NearestNeighbors
 from pydantic import RootModel
 import json
 from PIL import Image
+from image_utils.image_utils import rescale_width_height
 from image_library_db import db, assets, asset_metadata, generative_metadata, embeddings
 from schemas import Assets, AssetMetadata, GenerativeMetadata, Embeddings, DescriptionResponseSchema
 from pillow_metadata.metadata import Metadata
@@ -40,7 +41,9 @@ except ClientError as ce:
 def open_image(_image_path: str) -> Image.Image:
     _image = Image.open(_image_path)
     # resize the image
-    return _image
+    w, h = rescale_width_height(width=_image.size[0], height=_image.size[1], size=1024)
+
+    return _image.resize(size=(w, h))
 
 
 # Read some metadata from the image file
