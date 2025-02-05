@@ -20,6 +20,8 @@ st.header('Gemini Image Library Agent')
 # === BEGIN CHAT ===
 # ==================
 
+avatars = {"assistant": "👾", "user": "😺"}
+
 if "chat" not in st.session_state:
     # # Start a new chat
     st.session_state.chat = GeminiChat().chat
@@ -29,17 +31,17 @@ if "messages" not in st.session_state:
         {"role": "assistant", "content": "Hello"}]
 
 for msg in st.session_state.messages:
-    st.chat_message(msg["role"]).write(msg["content"])
+    st.chat_message(msg["role"], avatar=avatars[msg["role"]]).write(msg["content"])
 
 if prompt := st.chat_input():
     st.session_state.messages.append({"role": "user", "content": prompt})
-    st.chat_message("user").write(prompt)
+    st.chat_message("user", avatar=avatars['user']).write(prompt)
     response = st.session_state.chat.send_message(prompt)
 
     try:
-        msg = process_response(response)
+        msg = process_response(response, st.session_state.chat)
     except ClientError as ce:
         msg = ce
 
     st.session_state.messages.append({"role": "assistant", "content": msg})
-    st.chat_message("assistant").write(msg)
+    st.chat_message("assistant", avatar=avatars['assistant']).write(msg)
