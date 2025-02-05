@@ -369,16 +369,15 @@ class Neighbors:
 neighbors = Neighbors()
 
 
-def process_response(_response):
+def process_response(_response, _chat):
     if function_calls := _response.function_calls:
         results = []
         content = ""
         for call in function_calls:
             if call.name == 'import_image':
                 content = import_image(**call.args)
-                # content = import_image(_image_path=call.args['_image_path'], _update=call.args['_update'])
             elif call.name == 'search_image_library_sql':
-                content = search_image_library_sql(_sql_query=call.args['_sql_query'])
+                content = search_image_library_sql(**call.args)
             elif call.name == 'search_image_library_semantic':
                 content = search_image_library_semantic(_query_text=call.args['_query_text'])
 
@@ -390,6 +389,6 @@ def process_response(_response):
             )
 
         time.sleep(1)
-        return process_response(st.session_state.chat.send_message(results))
+        return process_response(_chat.send_message(results), _chat=_chat)
 
     return _response.text
