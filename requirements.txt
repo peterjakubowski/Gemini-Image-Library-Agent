@@ -1,7 +1,7 @@
 Pillow==11.1.0
 pandas==2.2.3
-streamlit==1.41.1
-google-genai==0.6.0
+streamlit==1.42.0
+google-genai==1.0.0
 imutils==0.5.4
 python-dotenv==1.0.1
 jupyterlab==4.2.5
