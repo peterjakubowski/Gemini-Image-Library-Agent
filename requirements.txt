@@ -10,3 +10,4 @@ pydantic==2.10.6
 fastlite
 numpy
 https://github.com/peterjakubowski/Pillow-Metadata/archive/main.zip
+https://github.com/peterjakubowski/Image-Editing-Utilities/archive/main.zip
