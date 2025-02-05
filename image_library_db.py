@@ -2,7 +2,7 @@
 #
 # Author: Peter Jakubowski
 # Date: 2/1/2025
-# Description:
+# Description: Database configuration
 #
 
 import fastlite
