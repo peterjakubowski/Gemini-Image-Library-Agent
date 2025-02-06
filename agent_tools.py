@@ -112,6 +112,30 @@ def insert_embedding(_embedding: Embeddings) -> Embeddings:
     return _record
 
 
+def update_assets(_asset: Assets) -> Assets:
+    _record = assets.update(_asset)
+
+    return _record
+
+
+def update_asset_metadata(_asset_metadata: AssetMetadata) -> AssetMetadata:
+    _record = asset_metadata.update(_asset_metadata)
+
+    return _record
+
+
+def update_genai_description(_genai_desc: GenerativeMetadata) -> GenerativeMetadata:
+    _record = generative_metadata.update(_genai_desc)
+
+    return _record
+
+
+def update_embedding(_embedding: Embeddings) -> Embeddings:
+    _record = embeddings.update(_embedding)
+
+    return _record
+
+
 # Wrap our tools in an import workflow
 def import_image(_image_path: str, _update=False):
     # Create an Assets object for our image
@@ -232,9 +256,57 @@ search_image_library_semantic_func = types.FunctionDeclaration(
         })
 )
 
+update_assets_func = types.FunctionDeclaration(
+    name='update_assets',
+    description='Update a record in the assets table within the database.',
+    parameters=types.Schema(
+        type=types.Type('OBJECT'),
+        properties={
+            "id": types.Schema(type=types.Type('STRING')),
+            "image_path": types.Schema(type=types.Type('STRING')),
+            "file_name": types.Schema(type=types.Type('STRING')),
+            "file_type": types.Schema(type=types.Type('STRING')),
+        })
+)
+
+update_asset_metadata_func = types.FunctionDeclaration(
+    name='update_asset_metadata',
+    description='Update a record in the asset_metadata table within the database.',
+    parameters=types.Schema(
+        type=types.Type('OBJECT'),
+        properties={
+            "id": types.Schema(type=types.Type('STRING')),
+            "capture_date": types.Schema(type=types.Type('STRING')),
+            "description": types.Schema(type=types.Type('STRING')),
+            "keywords": types.Schema(type=types.Type('STRING')),
+            "creator": types.Schema(type=types.Type('STRING')),
+            "person_in_image": types.Schema(type=types.Type('STRING')),
+            "location": types.Schema(type=types.Type('STRING')),
+            "city": types.Schema(type=types.Type('STRING')),
+            "state": types.Schema(type=types.Type('STRING'))
+        })
+)
+
+update_genai_description_func = types.FunctionDeclaration(
+    name='update_genai_description',
+    description='Update a record in the generative_metadata table within the database.',
+    parameters=types.Schema(
+        type=types.Type('OBJECT'),
+        properties={
+            "id": types.Schema(type=types.Type('STRING')),
+            "description": types.Schema(type=types.Type('STRING')),
+            "keywords": types.Schema(type=types.Type('STRING')),
+            "style": types.Schema(type=types.Type('STRING')),
+            "mood": types.Schema(type=types.Type('STRING'))
+        })
+)
+
 tools = types.Tool(function_declarations=[import_image_func,
                                           search_image_library_sql_func,
-                                          search_image_library_semantic_func
+                                          search_image_library_semantic_func,
+                                          update_assets_func,
+                                          update_asset_metadata_func,
+                                          update_genai_description_func
                                           ]
                    )
 
@@ -384,14 +456,16 @@ def process_response(_response, _chat):
                     content = search_image_library_sql(**call.args)
                 elif call.name == 'search_image_library_semantic':
                     content = search_image_library_semantic(_query_text=call.args['_query_text'])
+                elif call.name == 'update_assets':
+                    content = update_assets(Assets(**call.args))
+                elif call.name == 'update_asset_metadata':
+                    content = update_asset_metadata(AssetMetadata(**call.args))
+                elif call.name == 'update_genai_description':
+                    content = update_genai_description(GenerativeMetadata(**call.args))
             except Exception as ext:
                 st.warning(ext.__str__())
-                return process_response(_chat.send_message(types.Part.from_function_response(name=call.name,
-                                                                                             response={'content': ext.__str__()})
-                                                           ),
-                                        _chat=_chat
-                                        )
-            else:
+                content = ext.__str__()
+            finally:
                 results.append(
                     types.Part.from_function_response(
                         name=call.name,
