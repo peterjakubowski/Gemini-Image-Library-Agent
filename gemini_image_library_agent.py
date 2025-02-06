@@ -6,7 +6,7 @@
 #
 
 import streamlit as st
-from google.genai.errors import ClientError
+from google.genai.errors import ClientError, ServerError
 from agent_tools import GeminiChat, process_response
 
 
@@ -41,7 +41,9 @@ if prompt := st.chat_input():
     try:
         msg = process_response(response, st.session_state.chat)
     except ClientError as ce:
-        msg = ce
-
-    st.session_state.messages.append({"role": "assistant", "content": msg})
-    st.chat_message("assistant", avatar=avatars['assistant']).write(msg)
+        st.error(ce.__str__())
+    except ServerError as se:
+        st.error(se.__str__())
+    else:
+        st.session_state.messages.append({"role": "assistant", "content": msg})
+        st.chat_message("assistant", avatar=avatars['assistant']).write(msg)
