@@ -284,6 +284,25 @@ def python_code_execution(_prompt: str):
     return "\n".join(_results)
 
 
+def retrieve_and_display_image(_id: int) -> str:
+    """
+    Search the database for the path of the image with the given id.
+    Display the image in the chat.
+
+    :return: String success message
+    """
+
+    _result = db.q(f"SELECT * FROM assets WHERE id == '{_id}'")
+
+    if _result:
+        img = Image.open(_result[0]['image_path'])
+        st.image(img)
+        st.session_state.messages.append({"role": "assistant", "content": img})
+        return f"Image id {_id} displayed successfully."
+    
+    return f"Path for image id: {_id} could not be retrieved."
+
+
 # =========================
 # ===== Function Tools ====
 # =========================
@@ -336,6 +355,18 @@ python_code_execution_func = types.FunctionDeclaration(
         })
 )
 
+retrieve_and_display_image_func = types.FunctionDeclaration(
+    name='retrieve_and_display_image',
+    description=("Search the database for the path of the image with the given id."
+                 "Display the image in the chat."
+                 ),
+    parameters=types.Schema(
+        type=types.Type('OBJECT'),
+        properties={
+            "_id": types.Schema(type=types.Type('INTEGER'))
+        })
+)
+
 update_assets_func = types.FunctionDeclaration(
     name='update_assets',
     description='Update a record in the assets table within the database.',
@@ -385,6 +416,7 @@ tools = types.Tool(function_declarations=[import_image_func,
                                           search_image_library_sql_func,
                                           search_image_library_semantic_func,
                                           python_code_execution_func,
+                                          retrieve_and_display_image_func,
                                           update_assets_func,
                                           update_asset_metadata_func,
                                           update_genai_description_func]
@@ -565,6 +597,9 @@ def process_response(_response, _chat):
                     content = update_genai_description(GenerativeMetadata(**call.args))
                 elif call.name == 'python_code_execution':
                     content = python_code_execution(**call.args)
+                elif call.name == 'retrieve_and_display_image':
+                    content = retrieve_and_display_image(**call.args)
+
             except Exception as ext:
                 st.warning(ext.__str__())
                 content = ext.__str__()
