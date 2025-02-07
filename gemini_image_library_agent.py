@@ -39,11 +39,12 @@ if prompt := st.chat_input():
     response = st.session_state.chat.send_message(prompt)
 
     try:
-        msg = process_response(response, st.session_state.chat)
+        message = process_response(response, st.session_state.chat)
     except ClientError as ce:
         st.error(ce.__str__())
     except ServerError as se:
         st.error(se.__str__())
     else:
-        st.session_state.messages.append({"role": "assistant", "content": msg})
-        st.chat_message("assistant", avatar=avatars['assistant']).write(msg)
+        for msg in message:
+            st.session_state.messages.append({"role": "assistant", "content": msg})
+            st.chat_message("assistant", avatar=avatars['assistant']).write(msg)
