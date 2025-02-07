@@ -5,10 +5,6 @@
 # Description: Functions, classes, tools, and configurations
 #
 
-# =========================
-# ===== Gemini Setup ======
-# =========================
-
 from google import genai
 from google.genai.errors import ClientError
 from google.genai import types
@@ -23,6 +19,11 @@ from pillow_metadata.metadata import Metadata
 import time
 import numpy as np
 import streamlit as st
+from io import BytesIO
+
+# =========================
+# ===== Gemini Setup ======
+# =========================
 
 # Get our api key
 # Set up gemini client
@@ -35,6 +36,10 @@ except ClientError as ce:
 # =========================
 # ======= Functions =======
 # =========================
+
+
+def date_string_from_timestamp():
+    pass
 
 
 # Open the image from the file path
@@ -113,31 +118,67 @@ def insert_embedding(_embedding: Embeddings) -> Embeddings:
 
 
 def update_assets(_asset: Assets) -> Assets:
+    """
+    Update a record in the assets table within the database.
+
+    :param _asset:
+    :return:
+    """
+
     _record = assets.update(_asset)
 
     return _record
 
 
 def update_asset_metadata(_asset_metadata: AssetMetadata) -> AssetMetadata:
+    """
+    Update a record in the asset_metadata table within the database.
+
+    :param _asset_metadata:
+    :return:
+    """
+
     _record = asset_metadata.update(_asset_metadata)
 
     return _record
 
 
 def update_genai_description(_genai_desc: GenerativeMetadata) -> GenerativeMetadata:
+    """
+    Update a record in the generative_metadata table within the database.
+
+    :param _genai_desc:
+    :return:
+    """
+
     _record = generative_metadata.update(_genai_desc)
 
     return _record
 
 
 def update_embedding(_embedding: Embeddings) -> Embeddings:
+    """
+    Update a record in the embeddings table within the database.
+
+    :param _embedding:
+    :return:
+    """
+
     _record = embeddings.update(_embedding)
 
     return _record
 
 
 # Wrap our tools in an import workflow
-def import_image(_image_path: str, _update=False):
+def import_image(_image_path: str, _update=False) -> str:
+    """
+    Open an image, get information and metadata about the image, and import it into a database.
+
+    :param _image_path:
+    :param _update:
+    :return:
+    """
+
     # Create an Assets object for our image
     _asset = Assets(image_path=_image_path, file_name=_image_path.split('/')[-1])
     # let's open the image
@@ -215,6 +256,34 @@ def search_image_library_semantic(_query_text: str) -> list[Assets]:
             _id in _idx]
 
 
+def python_code_execution(_prompt: str):
+    """
+    Use a Gemini model to run python and execute code.
+
+    :param _prompt: Text prompt
+    :return:
+    """
+
+    _response = GeminiCodeExecution(_prompt=_prompt)
+
+    _results = []
+
+    for part in _response.result.candidates[0].content.parts:
+        if part.text is not None:
+            _results.append(part.text)
+        if part.executable_code is not None:
+            code_html = f'<pre style="background-color: green;">{part.executable_code.code}</pre>'  # Change code color
+            _results.append(code_html)
+        if part.code_execution_result is not None:
+            _results.append(part.code_execution_result.output)
+        if part.inline_data is not None:
+            img = Image.open(BytesIO(part.inline_data.data))
+            st.image(img)
+            st.session_state.messages.append({"role": "assistant", "content": img})
+
+    return "\n".join(_results)
+
+
 # =========================
 # ===== Function Tools ====
 # =========================
@@ -253,6 +322,17 @@ search_image_library_semantic_func = types.FunctionDeclaration(
         type=types.Type('OBJECT'),
         properties={
             "_query_text": types.Schema(type=types.Type('STRING'))
+        })
+)
+
+python_code_execution_func = types.FunctionDeclaration(
+    name='python_code_execution',
+    description=("Use a Gemini model to run python and execute code."
+                 ),
+    parameters=types.Schema(
+        type=types.Type('OBJECT'),
+        properties={
+            "_prompt": types.Schema(type=types.Type('STRING'))
         })
 )
 
@@ -304,10 +384,10 @@ update_genai_description_func = types.FunctionDeclaration(
 tools = types.Tool(function_declarations=[import_image_func,
                                           search_image_library_sql_func,
                                           search_image_library_semantic_func,
+                                          python_code_execution_func,
                                           update_assets_func,
                                           update_asset_metadata_func,
-                                          update_genai_description_func
-                                          ]
+                                          update_genai_description_func]
                    )
 
 # =========================
@@ -343,6 +423,13 @@ GEMINI_DESCRIPTION_CONFIG = types.GenerateContentConfig(safety_settings=None,
                                                         response_mime_type='application/json',
                                                         response_schema=DescriptionResponseSchema
                                                         )
+
+# Configure Gemini model for code execution
+CODE_EXECUTION_CONFIG = types.GenerateContentConfig(system_instruction=("Use python and matplotlib to run code "
+                                                                        "and visualize data. "
+                                                                        "I give you data, you return a graph."
+                                                                        ),
+                                                    tools=[types.Tool(code_execution=types.ToolCodeExecution())])
 
 # Configure our Gemini chat model
 CHAT_MODEL_CONFIG = types.GenerateContentConfig(safety_settings=None,
@@ -406,6 +493,20 @@ class GeminiEmbedding:
                           genai_description_vector=_embedding)
 
 
+# Configure Gemini for code execution
+class GeminiCodeExecution:
+    def __init__(self, _prompt: str):
+        self.prompt = _prompt
+        self.result = None
+        self.execute()
+
+    def execute(self):
+        self.result = client.models.generate_content(model="models/gemini-2.0-flash-001",
+                                                     config=CODE_EXECUTION_CONFIG,
+                                                     contents=self.prompt)
+
+
+# Configure Gemini chat
 class GeminiChat:
     def __init__(self):
         self.chat = client.chats.create(model='gemini-2.0-flash-001',
@@ -462,6 +563,8 @@ def process_response(_response, _chat):
                     content = update_asset_metadata(AssetMetadata(**call.args))
                 elif call.name == 'update_genai_description':
                     content = update_genai_description(GenerativeMetadata(**call.args))
+                elif call.name == 'python_code_execution':
+                    content = python_code_execution(**call.args)
             except Exception as ext:
                 st.warning(ext.__str__())
                 content = ext.__str__()
@@ -475,4 +578,4 @@ def process_response(_response, _chat):
         time.sleep(1)
         return process_response(_chat.send_message(results), _chat=_chat)
 
-    return _response.text
+    return [_response.text]
