@@ -38,10 +38,6 @@ except ClientError as ce:
 # =========================
 
 
-def date_string_from_timestamp():
-    pass
-
-
 # Open the image from the file path
 def open_image(_image_path: str) -> Image.Image:
     _image = Image.open(_image_path)
@@ -234,6 +230,8 @@ def search_image_library_semantic(_query_text: str) -> list[Assets]:
     The query text should describe an image that we're looking for.
     Accepts query as text, generates an embedding representation of the query,
     and returns results from a nearest neighbors search.
+    Revise the query text using other descriptions from the generative metadata table as inspiration.
+
 
     Args:
         _query_text (string): Query text string
@@ -278,7 +276,7 @@ def python_code_execution(_prompt: str):
             _results.append(part.code_execution_result.output)
         if part.inline_data is not None:
             img = Image.open(BytesIO(part.inline_data.data))
-            st.image(img)
+            st.chat_message("assistant", avatar=st.session_state.avatars['assistant']).write(img)
             st.session_state.messages.append({"role": "assistant", "content": img})
 
     return "\n".join(_results)
@@ -289,6 +287,7 @@ def retrieve_and_display_image(_id: int) -> str:
     Search the database for the path of the image with the given id.
     Display the image in the chat.
 
+    :param _id: Integer asset id
     :return: String success message
     """
 
@@ -296,76 +295,33 @@ def retrieve_and_display_image(_id: int) -> str:
 
     if _result:
         img = Image.open(_result[0]['image_path'])
-        st.image(img)
+        st.chat_message("assistant", avatar=st.session_state.avatars['assistant']).write(img)
         st.session_state.messages.append({"role": "assistant", "content": img})
         return f"Image id {_id} displayed successfully."
-    
+
     return f"Path for image id: {_id} could not be retrieved."
+
+
+def date_string_from_timestamp(_id: int) -> str:
+    """
+    Search the database for the capture date of the image with the given id.
+    Format the date as a string '%A, %B %d, %Y'.
+
+    :param _id:Integer asset id
+    :return: String date
+    """
+
+    _result = db.q(f"SELECT * FROM asset_metadata WHERE id == '{_id}'")
+
+    if _result and (capture_date := _result[0]['capture_date']):
+        return capture_date.strftime('%A, %B %d, %Y')
+
+    return "Could not convert the timestamp to a date string."
 
 
 # =========================
 # ===== Function Tools ====
 # =========================
-
-import_image_func = types.FunctionDeclaration(
-    name='import_image',
-    description='Open an image, get information and metadata about the image, and import it into a database.',
-    parameters=types.Schema(
-        type=types.Type('OBJECT'),
-        properties={
-            "_image_path": types.Schema(type=types.Type('STRING')),
-            "_update": types.Schema(type=types.Type('BOOLEAN'))
-        })
-)
-
-search_image_library_sql_func = types.FunctionDeclaration(
-    name='search_image_library_sql',
-    description=("Search the image library sqlite database using sql queries. "
-                 f"Database schema: {db.schema}"
-                 ),
-    parameters=types.Schema(
-        type=types.Type('OBJECT'),
-        properties={
-            "_sql_query": types.Schema(type=types.Type('STRING'))
-        })
-)
-
-search_image_library_semantic_func = types.FunctionDeclaration(
-    name='search_image_library_semantic',
-    description=("Search the image library using vector search."
-                 "The query text should describe an image that we're looking for. "
-                 "Accepts query as text, generates an embedding representation of the query, "
-                 "and returns results from a nearest neighbors search."
-                 ),
-    parameters=types.Schema(
-        type=types.Type('OBJECT'),
-        properties={
-            "_query_text": types.Schema(type=types.Type('STRING'))
-        })
-)
-
-python_code_execution_func = types.FunctionDeclaration(
-    name='python_code_execution',
-    description=("Use a Gemini model to run python and execute code."
-                 ),
-    parameters=types.Schema(
-        type=types.Type('OBJECT'),
-        properties={
-            "_prompt": types.Schema(type=types.Type('STRING'))
-        })
-)
-
-retrieve_and_display_image_func = types.FunctionDeclaration(
-    name='retrieve_and_display_image',
-    description=("Search the database for the path of the image with the given id."
-                 "Display the image in the chat."
-                 ),
-    parameters=types.Schema(
-        type=types.Type('OBJECT'),
-        properties={
-            "_id": types.Schema(type=types.Type('INTEGER'))
-        })
-)
 
 update_assets_func = types.FunctionDeclaration(
     name='update_assets',
@@ -412,14 +368,89 @@ update_genai_description_func = types.FunctionDeclaration(
         })
 )
 
-tools = types.Tool(function_declarations=[import_image_func,
+import_image_func = types.FunctionDeclaration(
+    name='import_image',
+    description='Open an image, get information and metadata about the image, and import it into a database.',
+    parameters=types.Schema(
+        type=types.Type('OBJECT'),
+        properties={
+            "_image_path": types.Schema(type=types.Type('STRING')),
+            "_update": types.Schema(type=types.Type('BOOLEAN'))
+        })
+)
+
+search_image_library_sql_func = types.FunctionDeclaration(
+    name='search_image_library_sql',
+    description=("Search the image library sqlite database using sql queries. "
+                 f"Database schema: {db.schema}"
+                 ),
+    parameters=types.Schema(
+        type=types.Type('OBJECT'),
+        properties={
+            "_sql_query": types.Schema(type=types.Type('STRING'))
+        })
+)
+
+search_image_library_semantic_func = types.FunctionDeclaration(
+    name='search_image_library_semantic',
+    description=("Search the image library using vector search."
+                 "The query text should describe an image that we're looking for. "
+                 "Accepts query as text, generates an embedding representation of the query, "
+                 "and returns results from a nearest neighbors search. "
+                 "Revise the query text using other descriptions from the generative metadata table as inspiration."
+                 ),
+    parameters=types.Schema(
+        type=types.Type('OBJECT'),
+        properties={
+            "_query_text": types.Schema(type=types.Type('STRING'))
+        })
+)
+
+python_code_execution_func = types.FunctionDeclaration(
+    name='python_code_execution',
+    description=("Use a Gemini model to run python and execute code."
+                 ),
+    parameters=types.Schema(
+        type=types.Type('OBJECT'),
+        properties={
+            "_prompt": types.Schema(type=types.Type('STRING'))
+        })
+)
+
+retrieve_and_display_image_func = types.FunctionDeclaration(
+    name='retrieve_and_display_image',
+    description=("Search the database for the path of the image with the given id."
+                 "Display the image in the chat."
+                 ),
+    parameters=types.Schema(
+        type=types.Type('OBJECT'),
+        properties={
+            "_id": types.Schema(type=types.Type('INTEGER'))
+        })
+)
+
+date_string_from_timestamp_func = types.FunctionDeclaration(
+    name='date_string_from_timestamp',
+    description=("Search the database for the capture date of the image with the given id."
+                 "Format the date as a string '%A, %B %d, %Y'."
+                 ),
+    parameters=types.Schema(
+        type=types.Type('OBJECT'),
+        properties={
+            "_id": types.Schema(type=types.Type('INTEGER'))
+        })
+)
+
+tools = types.Tool(function_declarations=[update_assets_func,
+                                          update_asset_metadata_func,
+                                          update_genai_description_func,
+                                          import_image_func,
                                           search_image_library_sql_func,
                                           search_image_library_semantic_func,
                                           python_code_execution_func,
                                           retrieve_and_display_image_func,
-                                          update_assets_func,
-                                          update_asset_metadata_func,
-                                          update_genai_description_func]
+                                          date_string_from_timestamp_func
+                                          ]
                    )
 
 # =========================
@@ -456,6 +487,10 @@ GEMINI_DESCRIPTION_CONFIG = types.GenerateContentConfig(safety_settings=None,
                                                         response_schema=DescriptionResponseSchema
                                                         )
 
+# Configure Gemini model for embeddings
+EMBED_MODEL_CONFIG = types.EmbedContentConfig(output_dimensionality=768,
+                                              task_type="SEMANTIC_SIMILARITY")
+
 # Configure Gemini model for code execution
 CODE_EXECUTION_CONFIG = types.GenerateContentConfig(system_instruction=("Use python and matplotlib to run code "
                                                                         "and visualize data. "
@@ -471,7 +506,7 @@ CHAT_MODEL_CONFIG = types.GenerateContentConfig(safety_settings=None,
                                                         mode=types.FunctionCallingConfigMode("AUTO"))),
                                                 system_instruction=CHAT_SYSTEM_INSTRUCTIONS,
                                                 max_output_tokens=2048,
-                                                temperature=0.3,
+                                                temperature=0.0,
                                                 top_p=0.6,
                                                 top_k=32,
                                                 presence_penalty=0.3,
@@ -518,7 +553,8 @@ class GeminiEmbedding:
 
     def generate_embedding(self) -> Embeddings:
         _result = client.models.embed_content(model="models/text-embedding-004",
-                                              contents=self.description)
+                                              contents=self.description,
+                                              config=EMBED_MODEL_CONFIG)
         _embedding = np.array(_result.embeddings[0].values).astype(np.float32).tobytes()
 
         return Embeddings(id=self.record.id,
@@ -577,7 +613,7 @@ class Neighbors:
 neighbors = Neighbors()
 
 
-def process_response(_response, _chat):
+def process_response(_response):
     if function_calls := _response.function_calls:
         results = []
         content = ""
@@ -610,7 +646,7 @@ def process_response(_response, _chat):
                         response={'content': content}
                     )
                 )
-        time.sleep(1)
-        return process_response(_chat.send_message(results), _chat=_chat)
+        # time.sleep(1)
+        return process_response(st.session_state.chat.send_message(results))
 
     return [_response.text]
