@@ -50,7 +50,7 @@ def open_image(_image_path: str) -> Image.Image:
 # Read some metadata from the image file
 def read_metadata(_image: Image.Image, _record: Assets) -> AssetMetadata:
     _meta = Metadata(_image)
-    _extracted = {'capture_date': _meta.metadata.xmp.CreateDate,
+    _extracted = {'capture_date': _meta.get_capture_date(),
                   'description': _meta.metadata.dc.description,
                   'keywords': ", ".join(_keywords) if (_keywords := _meta.metadata.dc.subject) else _keywords,
                   'creator': _meta.metadata.exif.Artist,
