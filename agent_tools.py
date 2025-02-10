@@ -186,7 +186,7 @@ def import_image(_image_path: str, _update=False) -> str:
         # insert the metadata into the database
         _meta_record = insert_metadata(_img_meta)
         # generate image descriptions
-        time.sleep(1)
+        # time.sleep(1)
         _genai_desc = GeminiDescription(_image,
                                         # RootModel[AssetMetadata](_meta_record).model_dump_json(exclude_none=True),
                                         _meta_record,
@@ -541,7 +541,15 @@ class GeminiDescription:
                                   description=_result_dict['description'],
                                   keywords=", ".join(_result_dict['keywords']),
                                   style=_result_dict['style'],
-                                  mood=_result_dict['mood'])
+                                  mood=_result_dict['mood'],
+                                  image_type=_result_dict['image_type'],
+                                  subject=_result_dict['subject'],
+                                  context=_result_dict['context'],
+                                  details=_result_dict['details'],
+                                  lighting=_result_dict['lighting'],
+                                  framing=_result_dict['framing'],
+                                  lens_and_camera=_result_dict['lens_and_camera'],
+                                  )
 
 
 # Configure Gemini model for embedding
