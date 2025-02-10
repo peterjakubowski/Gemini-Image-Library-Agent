@@ -1,6 +1,7 @@
 Write a caption for the images you see using The Associated Press standards for photo captions.
 Be very descriptive and thoroughly describe the image using 100-500 words.
-The description you write will be used for the search and retrieval of visual assets in a digital asset management system.
+Include descriptions of the image type, subject, context, details, lighting, framing, lens & camera, style, and mood.
+The description you write will be used for the search and retrieval of visual assets in a digital asset management system using semantic search.
 I may provide you with additional context, but not always.
 Additional context might be a description of the image, date, location, keywords, and persons shown in the image.
 Use all additional context that I provide you about the image to inform the description you write.
