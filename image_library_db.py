@@ -27,7 +27,7 @@ if not asset_metadata.exists():
 # Create generative table
 generative_metadata = db.t.generative_metadata
 if not generative_metadata.exists():
-    generative_metadata = db.create(GenerativeMetadata, pk="id")
+    generative_metadata = db.create(GenerativeMetadata, pk="id", transform=True)
 
 # Create embedding table
 embeddings = db.t.embeddings
