@@ -68,6 +68,13 @@ class GenerativeMetadata:
     keywords: str = Field(default=None)
     style: str = Field(default=None)
     mood: str = Field(default=None)
+    image_type: str = Field(default=None)
+    subject: str = Field(default=None)
+    context: str = Field(default=None)
+    details: str = Field(default=None)
+    lighting: str = Field(default=None)
+    framing: str = Field(default=None)
+    lens_and_camera: str = Field(default=None)
 
 
 # Embedding schema
@@ -90,7 +97,15 @@ class Embeddings:
 
 # Generative description model response schema
 class DescriptionResponseSchema(BaseModel):
-    description: str  # Long description of the image
-    keywords: list[str]  # List of keywords describing the image
-    style: str  # The style of the image
-    mood: str  # The mood of the image
+    description: str = Field(description='Long, detailed description of the image 100-500 words in length.')
+    keywords: list[str] = Field(description='List of keywords describing the image.')
+    style: str = Field(description="Describe the style of the image. Examples: Monochromatic, Natural, Realistic, Soft")
+    mood: str = Field(description="Describe the mood of the image. Examples: Calm, Dark, Optimistic, Reflective")
+    image_type: str = Field(description="Describe the image type. Examples: Photograph, Drawing, Hyper-real painting")
+    subject: str = Field(description="Describe the subject of the image. Examples: Cat, Cactus, Small Terrier")
+    context: str = Field(description="Describe the context of the image. Examples: Sitting by a window")
+    details: str = Field(description="Describe the details in the image. Examples: Staring at a cupcake")
+    lighting: str = Field(description="Describe the lighting seen in the image. Examples: Natural light, Studio light")
+    framing: str = Field(description="Describe the framing of the image. Examples: Medium shot, Close-up, Wide")
+    lens_and_camera: str = Field(description=("Describe the characteristics of the lens and camera used in the image. "
+                                              "Examples: Shallow depth of field, Wide angle, Sharp, Vintage, Macro"))
