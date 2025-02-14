@@ -113,6 +113,48 @@ def insert_embedding(_embedding: Embeddings) -> Embeddings:
     return _record
 
 
+# Wrap our tools in an import workflow
+def import_image(_image_path: str, _update=False) -> str:
+    """
+    Open an image, get information and metadata about the image, and import it into a database.
+
+    :param _image_path:
+    :param _update:
+    :return:
+    """
+
+    # Create an Assets object for our image
+    _asset = Assets(image_path=_image_path, file_name=_image_path.split('/')[-1])
+    # let's open the image
+    _image = open_image(_asset.image_path)
+    # check if the image already exists in the database
+    if _record := insert_asset(_asset, _update):
+        # get the image's embedded metadata
+        _img_meta = read_metadata(_image, _record)
+        # insert the metadata into the database
+        _meta_record = insert_metadata(_img_meta)
+        # generate image descriptions
+        # time.sleep(1)
+        _genai_desc = GeminiDescription(_image,
+                                        # RootModel[AssetMetadata](_meta_record).model_dump_json(exclude_none=True),
+                                        _meta_record,
+                                        _record
+                                        ).description
+        # insert the generated image descriptions into the database
+        _genai_desc_record = insert_genai_description(_genai_desc)
+        # generate an embedding
+        _embedding = GeminiEmbedding(_description=_genai_desc.description, _record=_record).embedding
+        # insert embedding data into the database
+        _embedding_record = insert_embedding(_embedding)
+
+        return f"Success! Asset with file name {_asset.file_name} has been updated in the database."
+
+    elif not _update:
+        return (f"Asset with file name {_asset.file_name} already exists in database. "
+                "If you would like to update the record for this asset, "
+                "submit your request again with the update flag set to True.")
+
+
 def update_assets(_asset: Assets) -> Assets:
     """
     Update a record in the assets table within the database.
@@ -163,48 +205,6 @@ def update_embedding(_embedding: Embeddings) -> Embeddings:
     _record = embeddings.update(_embedding)
 
     return _record
-
-
-# Wrap our tools in an import workflow
-def import_image(_image_path: str, _update=False) -> str:
-    """
-    Open an image, get information and metadata about the image, and import it into a database.
-
-    :param _image_path:
-    :param _update:
-    :return:
-    """
-
-    # Create an Assets object for our image
-    _asset = Assets(image_path=_image_path, file_name=_image_path.split('/')[-1])
-    # let's open the image
-    _image = open_image(_asset.image_path)
-    # check if the image already exists in the database
-    if _record := insert_asset(_asset, _update):
-        # get the image's embedded metadata
-        _img_meta = read_metadata(_image, _record)
-        # insert the metadata into the database
-        _meta_record = insert_metadata(_img_meta)
-        # generate image descriptions
-        # time.sleep(1)
-        _genai_desc = GeminiDescription(_image,
-                                        # RootModel[AssetMetadata](_meta_record).model_dump_json(exclude_none=True),
-                                        _meta_record,
-                                        _record
-                                        ).description
-        # insert the generated image descriptions into the database
-        _genai_desc_record = insert_genai_description(_genai_desc)
-        # generate an embedding
-        _embedding = GeminiEmbedding(_description=_genai_desc.description, _record=_record).embedding
-        # insert embedding data into the database
-        _embedding_record = insert_embedding(_embedding)
-
-        return f"Success! Asset with file name {_asset.file_name} has been updated in the database."
-
-    elif not _update:
-        return (f"Asset with file name {_asset.file_name} already exists in database. "
-                "If you would like to update the record for this asset, "
-                "submit your request again with the update flag set to True.")
 
 
 # Sql search
@@ -323,6 +323,17 @@ def date_string_from_timestamp(_id: int) -> str:
 # ===== Function Tools ====
 # =========================
 
+import_image_func = types.FunctionDeclaration(
+    name='import_image',
+    description='Open an image, get information and metadata about the image, and import it into a database.',
+    parameters=types.Schema(
+        type=types.Type('OBJECT'),
+        properties={
+            "_image_path": types.Schema(type=types.Type('STRING')),
+            "_update": types.Schema(type=types.Type('BOOLEAN'))
+        })
+)
+
 update_assets_func = types.FunctionDeclaration(
     name='update_assets',
     description='Update a record in the assets table within the database.',
@@ -365,17 +376,6 @@ update_genai_description_func = types.FunctionDeclaration(
             "keywords": types.Schema(type=types.Type('STRING')),
             "style": types.Schema(type=types.Type('STRING')),
             "mood": types.Schema(type=types.Type('STRING'))
-        })
-)
-
-import_image_func = types.FunctionDeclaration(
-    name='import_image',
-    description='Open an image, get information and metadata about the image, and import it into a database.',
-    parameters=types.Schema(
-        type=types.Type('OBJECT'),
-        properties={
-            "_image_path": types.Schema(type=types.Type('STRING')),
-            "_update": types.Schema(type=types.Type('BOOLEAN'))
         })
 )
 
@@ -441,10 +441,10 @@ date_string_from_timestamp_func = types.FunctionDeclaration(
         })
 )
 
-tools = types.Tool(function_declarations=[update_assets_func,
+tools = types.Tool(function_declarations=[import_image_func,
+                                          update_assets_func,
                                           update_asset_metadata_func,
                                           update_genai_description_func,
-                                          import_image_func,
                                           search_image_library_sql_func,
                                           search_image_library_semantic_func,
                                           python_code_execution_func,
