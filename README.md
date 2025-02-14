@@ -27,21 +27,20 @@ streamlit run gemini_image_library_agent.py
 
 ### Help
 
-![Help](examples/Screen_Shot_20250213_Help.png)
+<img src="examples/Screen_Shot_20250213_Help.png" alt="Help" width="800"/>
 
 ### Import
+<img src="examples/Screen_Shot_20250213_Import.png" alt="Import" width="800"/>
 
-![Import](examples/Screen_Shot_20250213_Import.png)
+<img src="examples/Screen_Shot_20250213_Metadata.png" alt="Show Metadata" width="800"/>
 
-![Show Metadata](examples/Screen_Shot_20250213_Metadata.png)
+### Search and Display
 
-### Search
-
-![Search](examples/Screen_Shot_20250213_Search_Display.png)
+<img src="examples/Screen_Shot_20250213_Search_Display.png" alt="Search and Display" width="800"/>
 
 ### Report
 
-![Top Keywords](examples/Screen_Shot_20250213_Report.png)
+<img src="examples/Screen_Shot_20250213_Report.png" alt="Top Keywords" width="800"/>
 
 ## Google Gen AI SDK (Gemini API)
 
