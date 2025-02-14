@@ -16,7 +16,6 @@ from image_utils.image_utils import rescale_width_height
 from image_library_db import db, assets, asset_metadata, generative_metadata, embeddings
 from schemas import Assets, AssetMetadata, GenerativeMetadata, Embeddings, DescriptionResponseSchema
 from pillow_metadata.metadata import Metadata
-import time
 import numpy as np
 import streamlit as st
 from io import BytesIO
