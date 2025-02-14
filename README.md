@@ -9,9 +9,9 @@ The chat interface is run using streamlit. Enter the command below in your cli t
 ```commandline
 streamlit run gemini_image_library_agent.py
 ```
-## Tools
+## Agent Tools
 
-* **import_image** -  Open an image, get information and metadata about the image, and import it into the database.
+* **import_image** -  Open an image, extract its metadata and other information, generate descriptions using a vision model, and import or update a record in the database.
 * **update_assets** - Update a record in the assets table within the database.
 * **update_asset_metadata** - Update a record in the asset_metadata table within the database.
 * **update_genai_description** -  Update a record in the generative_metadata table within the database.
@@ -20,8 +20,7 @@ streamlit run gemini_image_library_agent.py
 * **search_image_library_semantic** -  Search the image library using vector search.
 * **python_code_execution** - Use a Gemini model to run python and execute code.
 * **retrieve_and_display_image** - Search the database for an image and display it in the chat.
-* **date_string_from_timestamp** - Search the database for the capture date of the image with the given id.
-    Format the date as a string '%A, %B %d, %Y'.
+* **date_string_from_timestamp** - Search the database for the capture date of the image with the given id. Format the date as a string '%A, %B %d, %Y'.
 
 ## Examples
 
